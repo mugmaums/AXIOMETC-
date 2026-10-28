@@ -1,0 +1,27 @@
+# Google App Engine Application Configuration
+runtime: nodejs22
+env: standard
+instance_class: F2
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 5
+
+handlers:
+  - url: /assets
+    static_dir: dist/assets
+  - url: /uploads
+    static_dir: public/uploads
+  - url: /(.*\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot))
+    static_files: dist/\1
+    upload: dist/(.*\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot))
+  - url: /.*
+    script: auto
+    secure: always
+
+env_variables:
+  NODE_ENV: 'production'
+  PORT: '8080'
+
+service: axiomatic-official

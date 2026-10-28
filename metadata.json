@@ -1,0 +1,6 @@
+{
+  "name": "AXIOMETIC",
+  "description": "Real-time dynamic publishing canvas and 3D mahogany library. Transform Word and PPT manuscripts into interactive books with AI-generated covers and double-tap page turning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

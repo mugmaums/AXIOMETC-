@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidBook(data) {
+      return data.title is string && data.title.size() <= 200
+        && data.author is string && data.author.size() <= 100
+        && (data.chapters is list || !data.keys().hasAll(['chapters']))
+        && data.coverDesign is map
+        && (data.price is number || !data.keys().hasAll(['price']))
+        && (data.qrCodeUrl is string || !data.keys().hasAll(['qrCodeUrl']));
+    }
+
+    function isValidUserProgress(data) {
+      return data.bookId is string && data.bookId.size() <= 128
+        && data.userId == request.auth.uid
+        && data.progress is number && data.progress >= 0 && data.progress <= 1;
+    }
+
+    // 2. Books Collection (Publicly available books)
+    match /books/{bookId} {
+      allow read: if true; 
+      allow create: if isSignedIn() && isValidBook(request.resource.data);
+      allow update, delete: if false; 
+    }
+
+    // 3. User Collections
+    match /users/{userId} {
+      allow read, list: if true; 
+      allow create, update: if isOwner(userId);
+      
+      match /private/info {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /readHistory/{bookId} {
+        allow read, write: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidUserProgress(request.resource.data);
+      }
+
+      match /myBooks/{bookId} {
+        allow read, write: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidBook(request.resource.data);
+      }
+    }
+  }
+}
+

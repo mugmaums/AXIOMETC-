@@ -1,0 +1,95 @@
+{
+  "entities": {
+    "Book": {
+      "title": "Book",
+      "description": "A digital book synthesized by WRI Studio.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the book." },
+        "author": { "type": "string", "description": "The author of the book." },
+        "synopsis": { "type": "string", "description": "A brief overview of the book." },
+        "chapters": {
+          "type": "array",
+          "description": "List of chapters."
+        },
+        "coverDesign": {
+          "type": "object",
+          "properties": {
+            "front": { "type": "string" },
+            "back": { "type": "string" },
+            "spine": { "type": "string" },
+            "accentColor": { "type": "string" },
+            "style": { "type": "string" }
+          }
+        },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "pageCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "price": { "type": "number", "description": "Optional price for the book" },
+        "qrCodeUrl": { "type": "string", "description": "Optional QR code for payment" },
+        "userId": { "type": "string", "description": "The ID of the user who published the book" }
+      },
+      "required": ["title", "author", "chapters", "coverDesign"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Public user profile information for AXIOMETIC.",
+      "type": "object",
+      "properties": {
+        "axiometicId": { "type": "string", "description": "Unique handle ending in @axiometic" },
+        "photoUrl": { "type": "string" },
+        "displayName": { "type": "string" },
+        "accountType": { "type": "string", "enum": ["personal", "business"] },
+        "lastSeenAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["axiometicId"]
+    },
+    "UserPrivateData": {
+      "title": "User Private Data",
+      "description": "Sensitive user information.",
+      "type": "object",
+      "properties": {
+        "phoneNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "email": { "type": "string" },
+        "accountType": { "type": "string", "enum": ["personal", "business"] }
+      },
+      "required": ["phoneNumber", "dob"]
+    },
+    "UserProgress": {
+      "title": "User Progress",
+      "description": "Reading progress for a specific book by a user.",
+      "type": "object",
+      "properties": {
+        "bookId": { "type": "string" },
+        "userId": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 1 },
+        "lastReadAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookId", "userId", "progress"]
+    }
+  },
+  "firestore": {
+    "books": {
+      "schema": "Book",
+      "description": "Public library of published books."
+    },
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Public profile data for a user."
+    },
+    "users/{userId}/private/info": {
+      "schema": "UserPrivateData",
+      "description": "Private sensitive data for a user."
+    },
+    "users/{userId}/readHistory/{bookId}": {
+      "schema": "UserProgress",
+      "description": "Private reading history and progress for a user."
+    },
+    "users/{userId}/myBooks/{bookId}": {
+      "schema": "Book",
+      "description": "Personal library of a user."
+    }
+  }
+}

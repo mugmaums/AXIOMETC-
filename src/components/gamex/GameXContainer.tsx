@@ -11,8 +11,9 @@ import {
   Trash2,
   Maximize2,
   Tv,
-  Layers,
+  Zap,
   Flame,
+  ShieldCheck,
   Trophy
 } from 'lucide-react';
 import { db } from '../../firebase';
@@ -22,6 +23,7 @@ interface InstalledGame {
   id: string;
   title: string;
   category: string;
+  source: string;
   gameHtml: string;
   installedAt: string;
   plays: number;
@@ -34,17 +36,18 @@ interface GameXContainerProps {
 const STORAGE_KEY = 'gamex_installed_canvas_v1';
 
 const defaultPresets = [
-  { name: 'Subway Surfers Dash', category: 'Action / Runner', icon: '🏃‍♂️', prompt: 'Subway Surfers endless runner with jumping, obstacles, speed acceleration, and coin collection.' },
-  { name: 'Temple Run Jungle Dash', category: 'Adventure', icon: '🗿', prompt: 'Temple Run 3D-style obstacle runner through ancient jungle ruins with swipe and jump controls.' },
-  { name: 'Pac-Man Neon Arcade', category: 'Classic Arcade', icon: '🟡', prompt: 'Pac-Man retro arcade maze game with ghost AI, power pellets, and score counter.' },
-  { name: 'Space Shooter Galaxy', category: 'Shooter', icon: '🚀', prompt: 'Retro space shooter arcade game with laser firing, alien swarms, and shield powerups.' },
+  { name: 'Subway Surfers', category: 'Action / Runner', source: 'Poki Direct Pipeline', icon: '🏃‍♂️', prompt: 'Subway Surfers' },
+  { name: 'Temple Run 2', category: 'Adventure', source: 'CrazyGames Pipeline', icon: '🗿', prompt: 'Temple Run 2' },
+  { name: 'Moto X3M Bike Race', category: 'Racing', source: 'Poki Pipeline', icon: '🏍️', prompt: 'Moto X3M' },
+  { name: 'Basketball Stars', category: 'Sports', source: 'Funox Pipeline', icon: '🏀', prompt: 'Basketball Stars' },
+  { name: 'Pac-Man Arcade', category: 'Classic Arcade', source: 'Poki Arcade', icon: '🟡', prompt: 'Pac-Man' },
 ];
 
 export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'canvas'>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentGame, setCurrentGame] = useState<{ title: string; category: string; code: string } | null>(null);
+  const [currentGame, setCurrentGame] = useState<{ title: string; category: string; source: string; code: string } | null>(null);
   const [installedGames, setInstalledGames] = useState<InstalledGame[]>([]);
   const [activeCabinetGame, setActiveCabinetGame] = useState<InstalledGame | null>(null);
   const [installSuccessMessage, setInstallSuccessMessage] = useState('');
@@ -65,7 +68,6 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
       console.error('Failed to load local canvas games:', e);
     }
 
-    // Try fetching from Firestore collection `gamex_canvas_games`
     try {
       const q = query(collection(db, 'gamex_canvas_games'), orderBy('installedAt', 'desc'));
       const snapshot = await getDocs(q);
@@ -73,12 +75,12 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
         id: d.id,
         title: d.data().title || 'Untitled Game',
         category: d.data().category || 'Arcade',
+        source: d.data().source || 'Poki Pipeline',
         gameHtml: d.data().gameHtml || '',
         installedAt: d.data().installedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         plays: d.data().plays || 1
       }));
 
-      // Combine local and firestore, removing duplicates
       const map = new Map<string, InstalledGame>();
       [...localGames, ...fsGames].forEach(g => map.set(g.id, g));
       const merged = Array.from(map.values());
@@ -116,10 +118,11 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
         setCurrentGame({
           title: data.title || queryToSearch,
           category: data.category || 'Arcade',
+          source: data.source || 'Poki / CrazyGames / Funox Pipeline',
           code: data.gameHtml
         });
       } else {
-        alert(data.message || 'Failed to synthesize game.');
+        alert(data.message || 'Failed to establish game pipeline.');
       }
     } catch (err: any) {
       alert(`Network error: ${err.message}`);
@@ -135,6 +138,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
       id: `gamex_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       title: currentGame.title,
       category: currentGame.category,
+      source: currentGame.source,
       gameHtml: currentGame.code,
       installedAt: new Date().toISOString(),
       plays: 1
@@ -143,11 +147,11 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
     const updated = [newGame, ...installedGames];
     saveInstalledGames(updated);
 
-    // Save to Firestore permanently
     try {
       await addDoc(collection(db, 'gamex_canvas_games'), {
         title: currentGame.title,
         category: currentGame.category,
+        source: currentGame.source,
         gameHtml: currentGame.code,
         installedAt: serverTimestamp(),
         plays: 1
@@ -156,12 +160,12 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
       console.warn('Firestore save note:', e);
     }
 
-    setInstallSuccessMessage(`"${currentGame.title}" successfully installed on dedicated GameX Canvas!`);
+    setInstallSuccessMessage(`"${currentGame.title}" direct pipeline successfully installed on Dedicated GameX Canvas!`);
     setTimeout(() => setInstallSuccessMessage(''), 3500);
   };
 
   const handleUninstallGame = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this game from GameX Canvas?')) return;
+    if (!confirm('Are you sure you want to remove this game pipeline from GameX Canvas?')) return;
     const updated = installedGames.filter(g => g.id !== id);
     saveInstalledGames(updated);
 
@@ -184,12 +188,12 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
           </div>
           <div>
             <h1 className="text-lg font-black text-gold-accent font-sans tracking-wide flex items-center gap-2">
-              <span>GameX Arcade & Canvas Engine</span>
+              <span>GameX Direct Pipeline Engine</span>
               <span className="text-[10px] px-2 py-0.5 rounded bg-gold-accent text-mahogany-950 font-mono font-black uppercase">
-                Gemini 3.8 Flash
+                Poki · CrazyGames · Funox
               </span>
             </h1>
-            <p className="text-[11px] text-ivory/60 font-serif">Synthesize Poki, CrazyGames & Funox catalogs & install on dedicated GameX Canvas</p>
+            <p className="text-[11px] text-ivory/60 font-serif">Direct stream pipeline for Poki, CrazyGames, & Funox without switching apps</p>
           </div>
         </div>
 
@@ -200,7 +204,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'search' ? 'bg-gold-accent text-mahogany-950 shadow-md font-black' : 'text-ivory/70 hover:text-gold-accent'}`}
           >
             <Search className="w-3.5 h-3.5" />
-            <span>Search & Synthesize</span>
+            <span>Search & Pipeline</span>
           </button>
 
           <button
@@ -225,7 +229,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
               onClick={() => setActiveTab('canvas')}
               className="px-3 py-1 rounded-lg bg-emerald-400 text-mahogany-950 font-black text-[11px] hover:scale-105 transition-all cursor-pointer"
             >
-              Go to GameX Canvas →
+              Go to Dedicated GameX Canvas →
             </button>
           </div>
         )}
@@ -238,14 +242,14 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
 
               <div className="space-y-2 relative z-10">
                 <span className="text-xs font-mono font-bold text-gold-accent uppercase tracking-widest flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-4 h-4" />
-                  <span>Universal Game Search Bubble</span>
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <span>Direct Web Game Pipeline Search Bubble</span>
                 </span>
                 <h2 className="text-2xl sm:text-4xl font-black text-gold-accent font-sans">
-                  Type Any Web Game Name
+                  Type Any Game Name to Stream Directly
                 </h2>
                 <p className="text-xs sm:text-sm text-ivory/80 max-w-xl mx-auto font-serif">
-                  GameX searches Poki, CrazyGames, & Funox repositories, synthesizes code using Gemini 3.8 Flash, and lets you play & install it directly onto your Dedicated GameX Canvas.
+                  Type any game prompt (e.g. Subway Surfers, Temple Run, Moto X3M). GameX searches Poki, CrazyGames, & Funox repositories and establishes a direct pipeline so you play the exact game inside GameX.
                 </p>
               </div>
 
@@ -262,7 +266,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search game name (e.g., Subway Surfers, Temple Run, Pac-Man, Space Shooter)..."
+                    placeholder="Search game name (e.g. Subway Surfers, Temple Run, Moto X3M, Basketball Stars)..."
                     className="w-full bg-mahogany-950 border-2 border-gold-accent/40 rounded-2xl pl-12 pr-4 py-4 text-sm text-ivory placeholder-ivory/40 focus:outline-none focus:border-gold-accent font-sans shadow-inner"
                   />
                 </div>
@@ -272,13 +276,13 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                   className="px-8 py-4 bg-gold-accent hover:bg-gold-accent/90 text-mahogany-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-xl hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-2"
                 >
                   <Gamepad2 className="w-4 h-4" />
-                  <span>{isLoading ? 'Synthesizing...' : 'Search & Fetch'}</span>
+                  <span>{isLoading ? 'Connecting Pipeline...' : 'Search & Stream'}</span>
                 </button>
               </form>
 
-              {/* Popular Arcade Catalog Shortcuts */}
+              {/* Fast Direct Catalog Shortcuts */}
               <div className="pt-4 border-t border-gold-accent/20 flex flex-wrap items-center justify-center gap-3 relative z-10">
-                <span className="text-xs font-mono text-ivory/60">Fast Catalog Shortcuts:</span>
+                <span className="text-xs font-mono text-ivory/60">Verified Direct Pipelines:</span>
                 {defaultPresets.map((preset, idx) => (
                   <button
                     key={idx}
@@ -295,15 +299,15 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
               </div>
             </div>
 
-            {/* Loading Indicator */}
+            {/* Loading State */}
             {isLoading && (
               <div className="text-center py-20 space-y-4">
                 <div className="w-12 h-12 border-4 border-gold-accent border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm font-mono text-gold-accent">Connecting to Poki & CrazyGames repositories via Gemini 3.8 Flash...</p>
+                <p className="text-sm font-mono text-gold-accent">Searching Poki, CrazyGames, & Funox catalogs & establishing direct game pipeline stream...</p>
               </div>
             )}
 
-            {/* Generated Game Preview */}
+            {/* Direct Game Pipeline Viewport */}
             {currentGame && !isLoading && (
               <div className="bg-mahogany-900/95 border-2 border-gold-accent/50 rounded-3xl p-6 shadow-2xl space-y-6 brass-border animate-in fade-in zoom-in-95 duration-300">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-gold-accent/30">
@@ -313,7 +317,10 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-gold-accent font-sans">{currentGame.title}</h3>
-                      <p className="text-xs text-ivory/70 font-mono">{currentGame.category} · Ready to Play & Install</p>
+                      <p className="text-xs text-emerald-400 font-mono flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>Pipeline Active: {currentGame.source}</span>
+                      </p>
                     </div>
                   </div>
 
@@ -322,17 +329,18 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                     className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center gap-2 cursor-pointer hover:scale-105"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Install on Dedicated GameX Canvas</span>
+                    <span>Install Pipeline on GameX Canvas</span>
                   </button>
                 </div>
 
-                {/* Sandbox Frame */}
-                <div className="w-full h-[520px] bg-black rounded-2xl overflow-hidden border border-gold-accent/30 shadow-2xl relative">
+                {/* Direct Playable Game Pipeline Frame */}
+                <div className="w-full h-[580px] bg-black rounded-2xl overflow-hidden border border-gold-accent/30 shadow-2xl relative">
                   <iframe
                     srcDoc={currentGame.code}
                     title={currentGame.title}
                     className="w-full h-full border-0"
-                    sandbox="allow-scripts allow-same-origin allow-pointer-lock"
+                    sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms"
+                    allow="autoplay; fullscreen; gamepad; focus-without-user-activation;"
                   />
                 </div>
               </div>
@@ -349,7 +357,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                   <Tv className="w-6 h-6 text-gold-accent" />
                   <span>Dedicated GameX Canvas</span>
                 </h2>
-                <p className="text-xs text-ivory/70 font-serif">Your permanent arcade inventory of installed canvas games</p>
+                <p className="text-xs text-ivory/70 font-serif">Your permanent arcade inventory of installed game pipelines</p>
               </div>
 
               <button
@@ -357,7 +365,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                 className="px-4 py-2 rounded-xl bg-gold-accent text-mahogany-950 font-black text-xs uppercase tracking-wider hover:scale-105 transition-all shadow-lg cursor-pointer flex items-center gap-2"
               >
                 <Search className="w-4 h-4" />
-                <span>Search & Add Games</span>
+                <span>Search & Connect Pipelines</span>
               </button>
             </div>
 
@@ -371,7 +379,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                     </div>
                     <div>
                       <h3 className="text-base font-black text-gold-accent font-sans">{activeCabinetGame.title}</h3>
-                      <p className="text-[10px] text-ivory/60 font-mono">Running on GameX Canvas Engine</p>
+                      <p className="text-[10px] text-emerald-400 font-mono">Pipeline: {activeCabinetGame.source}</p>
                     </div>
                   </div>
 
@@ -383,12 +391,13 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                   </button>
                 </div>
 
-                <div className="w-full h-[580px] bg-black rounded-2xl overflow-hidden border border-gold-accent/40 shadow-2xl relative">
+                <div className="w-full h-[600px] bg-black rounded-2xl overflow-hidden border border-gold-accent/40 shadow-2xl relative">
                   <iframe
                     srcDoc={activeCabinetGame.gameHtml}
                     title={activeCabinetGame.title}
                     className="w-full h-full border-0"
-                    sandbox="allow-scripts allow-same-origin allow-pointer-lock"
+                    sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms"
+                    allow="autoplay; fullscreen; gamepad; focus-without-user-activation;"
                   />
                 </div>
               </div>
@@ -400,13 +409,13 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                 <Tv className="w-12 h-12 text-gold-accent/40 mx-auto" />
                 <h3 className="text-lg font-bold text-gold-accent font-sans">No Games Installed on GameX Canvas</h3>
                 <p className="text-xs text-ivory/60 font-serif italic max-w-md mx-auto">
-                  Search any game in the search bubble (e.g. Subway Surfers, Pac-Man) and click "Install on Dedicated GameX Canvas".
+                  Type any game name in the search bubble (Subway Surfers, Temple Run, Moto X3M) and click "Install Pipeline on GameX Canvas".
                 </p>
                 <button
                   onClick={() => setActiveTab('search')}
                   className="px-6 py-3 rounded-xl bg-gold-accent text-mahogany-950 font-black text-xs uppercase tracking-wider hover:scale-105 transition-all shadow-lg cursor-pointer"
                 >
-                  Search & Install Games Now
+                  Search & Install Game Pipelines Now
                 </button>
               </div>
             ) : (
@@ -418,8 +427,9 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono px-2.5 py-0.5 rounded bg-gold-accent/20 text-gold-accent border border-gold-accent/30 font-bold uppercase">
-                          {game.category || 'Arcade'}
+                        <span className="text-[10px] font-mono px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold uppercase flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          <span>{game.source || 'Direct Pipeline'}</span>
                         </span>
                         <button
                           onClick={() => handleUninstallGame(game.id)}
@@ -434,7 +444,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                         {game.title}
                       </h3>
                       <p className="text-xs text-ivory/60 font-serif italic line-clamp-2">
-                        HTML5 game playable on GameX Canvas. Installed {new Date(game.installedAt).toLocaleDateString()}.
+                        Direct pipeline stream active. Installed {new Date(game.installedAt).toLocaleDateString()}.
                       </p>
                     </div>
 
@@ -447,7 +457,7 @@ export const GameXContainer: React.FC<GameXContainerProps> = ({ onOpenCanvas }) 
                         className="w-full py-2.5 rounded-xl bg-gold-accent text-mahogany-950 font-black text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
                       >
                         <Play className="w-4 h-4 fill-current" />
-                        <span>Launch on Cabinet</span>
+                        <span>Play on Dedicated Canvas</span>
                       </button>
                     </div>
                   </div>
